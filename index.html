@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nordljus – Midnattssol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#04060b; --ink:#eef3f5; --muted:#8fa3ad; --aurora:#1fe0a8; --teal:#0f7c9a; --amber:#f0a94a; --gold:#e8c27a;
+  --serif:"Instrument Serif",Georgia,serif; --sans:"Inter",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300}
+body{overflow-x:hidden}
+a{color:inherit}
+
+/* Laddning */
+#loader{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:var(--bg);transition:opacity .9s ease}
+#loader.done{opacity:0;pointer-events:none}
+#loader .inner{text-align:center}
+#loader .word{font-family:var(--serif);font-size:clamp(36px,6vw,64px);letter-spacing:.04em}
+#loader .bar{width:180px;height:1px;background:rgba(238,243,245,.15);margin:22px auto 10px;overflow:hidden}
+#loader .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--aurora));transition:width .2s ease}
+#loader .pct{font-size:12px;letter-spacing:.2em;color:var(--muted)}
+
+/* Header */
+header{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:24px clamp(16px,4vw,56px);mix-blend-mode:difference}
+.brand{font-family:var(--serif);font-size:24px;letter-spacing:.18em;text-decoration:none}
+nav{display:flex;gap:28px;font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+nav a{text-decoration:none;opacity:.8;transition:opacity .2s}
+nav a:hover{opacity:1}
+@media (max-width:640px){nav{display:none}}
+
+/* Scrollsekvens */
+#seq{position:relative;height:500vh}
+#stage{position:sticky;top:0;height:100vh;width:100%;overflow:hidden}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#stage::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 55%,rgba(4,6,11,.75) 100%)}
+
+.beat{position:absolute;z-index:2;opacity:0;transform:translateY(24px);transition:none;will-change:opacity,transform}
+.beat .eyebrow{font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--aurora);margin-bottom:18px}
+.beat h1{font-family:var(--serif);font-weight:400;font-size:clamp(64px,13vw,200px);line-height:.85;letter-spacing:.02em}
+.beat h2{font-family:var(--serif);font-weight:400;font-size:clamp(44px,6.5vw,96px);line-height:.95}
+.beat h2 em{color:var(--amber)}
+.beat p{font-size:clamp(15px,1.15vw,18px);line-height:1.7;color:var(--muted);max-width:34ch;margin-top:18px}
+.b1{left:0;right:0;top:12vh;text-align:center}
+.b1 p{margin:14px auto 0;max-width:none}
+.b2{left:clamp(16px,6vw,96px);bottom:16vh}
+.b3{right:clamp(16px,6vw,96px);top:22vh;text-align:right}
+.b3 ul{list-style:none;margin-top:22px;display:grid;gap:12px;font-size:14px;letter-spacing:.06em;color:var(--ink)}
+.b3 li span{color:var(--muted);margin-right:10px}
+.b4{left:clamp(16px,6vw,96px);bottom:12vh}
+.price{font-family:var(--serif);font-size:32px;margin-top:20px;color:var(--gold)}
+.btn{display:inline-flex;align-items:center;gap:12px;margin-top:22px;padding:15px 28px;border:1px solid rgba(238,243,245,.35);border-radius:999px;
+  font-size:13px;letter-spacing:.16em;text-transform:uppercase;text-decoration:none;background:rgba(4,6,11,.25);backdrop-filter:blur(6px);
+  transition:background .3s,border-color .3s,color .3s}
+.btn:hover{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:2;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);transition:opacity .4s}
+@media (max-width:760px){
+  .b2,.b4{bottom:9vh}
+  .b3{top:auto;bottom:9vh;right:auto;left:16px;text-align:left}
+  .beat p{max-width:30ch}
+  .beat{text-shadow:0 2px 24px rgba(4,6,11,.9),0 0 2px rgba(4,6,11,.6)}
+}
+
+/* Kollektion */
+#kollektion{padding:18vh clamp(16px,6vw,96px) 14vh;position:relative}
+#kollektion .head{display:flex;justify-content:space-between;align-items:end;gap:24px;flex-wrap:wrap;margin-bottom:56px}
+#kollektion h3{font-family:var(--serif);font-weight:400;font-size:clamp(40px,5vw,72px);line-height:1}
+#kollektion .head p{color:var(--muted);max-width:40ch;line-height:1.7}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{position:relative;border:1px solid rgba(238,243,245,.1);border-radius:20px;padding:28px;min-height:360px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0))}
+.card .glow{position:absolute;inset:-30%;filter:blur(60px);opacity:.35;transition:opacity .5s}
+.card:hover .glow{opacity:.6}
+.card .num{position:absolute;top:24px;left:28px;font-size:12px;letter-spacing:.2em;color:var(--muted)}
+.card .tag{position:absolute;top:22px;right:24px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;padding:6px 12px;border-radius:999px;border:1px solid rgba(238,243,245,.2);color:var(--muted)}
+.card h4{font-family:var(--serif);font-weight:400;font-size:40px;position:relative}
+.card p{position:relative;color:var(--muted);margin-top:8px;line-height:1.6;font-size:14px}
+.card img{position:absolute;left:50%;top:44%;width:120%;transform:translate(-50%,-50%);object-fit:cover;opacity:.9;mask-image:radial-gradient(ellipse at center,#000 35%,transparent 70%)}
+@media (max-width:900px){.cards{grid-template-columns:1fr}}
+
+footer{padding:40px clamp(16px,6vw,96px);border-top:1px solid rgba(238,243,245,.08);display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;color:var(--muted);font-size:13px}
+footer .brand{font-size:18px;color:var(--ink)}
+</style>
+</head>
+<body>
+<div id="loader"><div class="inner"><div class="word">Nordljus</div><div class="bar"><i id="barfill"></i></div><div class="pct" id="pct">0 %</div></div></div>
+
+<header>
+  <a class="brand" href="#">NORDLJUS</a>
+  <nav><a href="#kollektion">Kollektionen</a><a href="#">Om oss</a><a href="#">Butiker</a></nav>
+</header>
+
+<section id="seq">
+  <div id="stage">
+    <canvas id="c"></canvas>
+
+    <div class="beat b1" data-in="0" data-out=".2">
+      <div class="eyebrow">Eau de Parfum · 50 ml</div>
+      <h1>Nordljus</h1>
+      <p>Dofter av det nordiska ljuset</p>
+    </div>
+
+    <div class="beat b2" data-in=".24" data-out=".48">
+      <div class="eyebrow">Nr 01</div>
+      <h2>Midnatts&shy;<em>sol</em></h2>
+      <p>Bärnsten, bergamott och solvarm granit. Ljuset som aldrig riktigt går ner.</p>
+    </div>
+
+    <div class="beat b3" data-in=".52" data-out=".74">
+      <div class="eyebrow">Hantverket</div>
+      <h2>Glas. Guld.<br>Ljus.</h2>
+      <ul>
+        <li><span>01</span>Handblåst klot i kristallglas</li>
+        <li><span>02</span>Propp i polerat guld</li>
+        <li><span>03</span>Vegansk, tillverkad i Sverige</li>
+      </ul>
+    </div>
+
+    <div class="beat b4" data-in=".8" data-out="1.1">
+      <div class="eyebrow">Midnattssol · 50 ml</div>
+      <h2>Fånga solen.</h2>
+      <div class="price">1 450 kr</div>
+      <a class="btn" href="#kollektion">Upptäck kollektionen <span>→</span></a>
+    </div>
+
+    <div class="hint" id="hint">Scrolla</div>
+  </div>
+</section>
+
+<section id="kollektion">
+  <div class="head">
+    <h3>Kollektionen</h3>
+    <p>Tre dofter, tre former. Varje flaska fångar ett nordiskt ljus i glas.</p>
+  </div>
+  <div class="cards">
+    <article class="card">
+      <div class="glow" style="background:radial-gradient(circle,#f0a94a,transparent 60%)"></div>
+      <img src="frames/f_0048.webp" alt="Midnattssol">
+      <div class="num">01</div><div class="tag">Ny</div>
+      <h4>Midnattssol</h4><p>Bärnsten · Bergamott · Granit</p>
+    </article>
+    <article class="card">
+      <div class="glow" style="background:radial-gradient(circle,#2b5cff,transparent 60%)"></div>
+      <div class="num">02</div><div class="tag">Kommer snart</div>
+      <h4>Polarnatt</h4><p>Is · Svart te · Ceder</p>
+    </article>
+    <article class="card">
+      <div class="glow" style="background:radial-gradient(circle,#1fe0a8,transparent 60%)"></div>
+      <div class="num">03</div><div class="tag">Kommer snart</div>
+      <h4>Norrsken</h4><p>Gran · Mynta · Ozon</p>
+    </article>
+  </div>
+</section>
+
+<footer><span class="brand">NORDLJUS</span><span>Ett fiktivt varumärke · Portfolioprojekt</span></footer>
+
+<script>
+const FRAMES = 96;
+const src = i => `frames/f_${String(i+1).padStart(4,"0")}.webp`;
+const canvas = document.getElementById("c"), ctx = canvas.getContext("2d");
+const imgs = new Array(FRAMES);
+let loaded = 0, current = 0, target = 0;
+
+// Ladda: första bilden direkt, sedan resten
+function load(i){ return new Promise(res => { const im = new Image(); im.onload = im.onerror = () => { imgs[i] = im; loaded++; progress(); res(); }; im.src = src(i); }); }
+function progress(){
+  const p = Math.round(loaded / FRAMES * 100);
+  document.getElementById("barfill").style.width = p + "%";
+  document.getElementById("pct").textContent = p + " %";
+  if (loaded >= FRAMES * .25) document.getElementById("loader").classList.add("done");
+}
+(async () => {
+  await load(0); resize(); draw(0);
+  const rest = []; for (let i = 1; i < FRAMES; i++) rest.push(load(i));
+  await Promise.all(rest);
+})();
+
+function resize(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
+  draw(Math.round(current));
+}
+addEventListener("resize", resize);
+
+// Rita bilden som "cover"; använd närmaste laddade bild om den här inte är klar
+function draw(i){
+  let im = imgs[i];
+  if (!im || !im.naturalWidth) { for (let d = 1; d < FRAMES; d++) { im = imgs[i-d] || imgs[i+d]; if (im && im.naturalWidth) break; } }
+  if (!im || !im.naturalWidth) return;
+  const cw = canvas.width, ch = canvas.height, s = Math.max(cw / im.naturalWidth, ch / im.naturalHeight);
+  const w = im.naturalWidth * s, h = im.naturalHeight * s;
+  ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
+}
+
+const seq = document.getElementById("seq");
+const beats = [...document.querySelectorAll(".beat")];
+const hint = document.getElementById("hint");
+function progressOf(){
+  const r = seq.getBoundingClientRect();
+  return Math.min(1, Math.max(0, -r.top / (r.height - innerHeight)));
+}
+function updateBeats(p){
+  beats.forEach(b => {
+    const a = +b.dataset.in, z = +b.dataset.out, fade = .05;
+    let o = 0;
+    if (p >= a && p <= z) o = Math.min(1, (p - a) / fade, (z - p) / fade);
+    if (a === 0 && p < fade) o = 1;
+    o = Math.max(0, Math.min(1, o));
+    b.style.opacity = o;
+    b.style.transform = `translateY(${(1 - o) * 24}px)`;
+  });
+  hint.style.opacity = p < .02 ? 1 : 0;
+}
+
+// Mjuk uppspelning: glid mot målbilden
+function tick(){
+  const p = progressOf();
+  target = p * (FRAMES - 1);
+  current += (target - current) * 0.12;
+  const f = Math.round(current);
+  draw(f);
+  updateBeats(p);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
