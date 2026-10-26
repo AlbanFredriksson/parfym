@@ -104,7 +104,7 @@ nav a:hover,nav a.on{opacity:1}
 #next .arrow{display:inline-block;margin-left:16px;transition:transform .4s}
 #next:hover .arrow{transform:translateX(12px)}
 .swipe-hint{display:none;position:fixed;bottom:18px;left:0;right:0;text-align:center;z-index:15;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);transition:opacity .4s;pointer-events:none}
-@media (hover:none) and (max-width:900px){.swipe-hint{display:block}}
+@media (hover:none) and (max-width:900px){.swipe-hint{display:block}.hint{bottom:46px}}
 footer{padding:40px clamp(16px,6vw,96px);border-top:1px solid rgba(238,243,245,.08);display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;color:var(--muted);font-size:13px}
 footer .brand{font-size:18px;color:var(--ink)}
 </style>
@@ -155,17 +155,32 @@ footer .brand{font-size:18px;color:var(--ink)}
 <footer><a class="brand" href="index.html" style="text-decoration:none">NORDLJUS</a><span>Ett fiktivt varumärke · Portfolioprojekt</span></footer>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
 <script>
-const FRAMES=96, DIR="norrsken";
-const src=i=>`frames/${DIR}/f_${String(i+1).padStart(4,"0")}.webp`;
+const FRAMES=96, DIR="norrsken", ZOOM=0.6;
+// Mobil/smal skärm: mindre bilder (1280×720)
+const MOB=matchMedia("(max-width: 900px)").matches;
+const src=i=>`${MOB?"frames_m":"frames"}/${DIR}/f_${String(i+1).padStart(4,"0")}.webp`;
 const canvas=document.getElementById("c"),ctx=canvas.getContext("2d");
 const imgs=new Array(FRAMES);let loaded=0,current=0,target=0;
 function load(i){return new Promise(res=>{const im=new Image();im.onload=im.onerror=()=>{imgs[i]=im;loaded++;progress();res()};im.src=src(i)})}
 function progress(){const p=Math.round(loaded/FRAMES*100);document.getElementById("barfill").style.width=p+"%";document.getElementById("pct").textContent=p+" %";if(loaded>=FRAMES*.25)document.getElementById("loader").classList.add("done")}
-(async()=>{await load(0);resize();draw(0);const r=[];for(let i=1;i<FRAMES;i++)r.push(load(i));await Promise.all(r)})();
+// Ladda bild 1 först, sedan var 8:e (grov förhandsvisning), sedan resten
+(async()=>{await load(0);resize();draw(0);const order=[];for(let i=8;i<FRAMES;i+=8)order.push(i);for(let i=1;i<FRAMES;i++)if(i%8)order.push(i);
+for(let k=0;k<order.length;k+=12)await Promise.all(order.slice(k,k+12).map(load))})();
 function resize(){const d=Math.min(devicePixelRatio||1,2);canvas.width=innerWidth*d;canvas.height=innerHeight*d;draw(Math.round(current))}
 addEventListener("resize",resize);
 function draw(i){let im=imgs[i];if(!im||!im.naturalWidth){for(let d=1;d<FRAMES;d++){im=imgs[i-d]||imgs[i+d];if(im&&im.naturalWidth)break}}if(!im||!im.naturalWidth)return;
-const cw=canvas.width,ch=canvas.height,s=Math.max(cw/im.naturalWidth,ch/im.naturalHeight),w=im.naturalWidth*s,h=im.naturalHeight*s;ctx.drawImage(im,(cw-w)/2,(ch-h)/2,w,h)}
+const cw=canvas.width,ch=canvas.height,iw=im.naturalWidth,ih=im.naturalHeight,cover=Math.max(cw/iw,ch/ih);
+if(cw/ch>=1.2){const w=iw*cover,h=ih*cover;ctx.drawImage(im,(cw-w)/2,(ch-h)/2,w,h);return}
+// Stående/smal skärm: visa hela bilden medan rubriken syns, zooma sedan mjukt in mot flaskan
+const contain=Math.min(cw/iw,ch/ih),p=prog(),t=Math.min(1,Math.max(0,(p-.2)/.22)),e=t*t*(3-2*t);
+const zoomS=Math.min(cover,Math.max(contain,cw/(iw*ZOOM))),s=contain+(zoomS-contain)*e,w=iw*s,h=ih*s,x=(cw-w)/2,y=(ch-h)/2;
+// Suddig, mörk förlängning av samma bild ovanför och under
+if(h<ch-1){bctx.drawImage(im,0,0,bc.width,bc.height);ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+const bw=iw*cover*1.15,bh=ih*cover*1.15;ctx.drawImage(bc,(cw-bw)/2,(ch-bh)/2,bw,bh);ctx.fillStyle="rgba(4,6,11,.68)";ctx.fillRect(0,0,cw,ch);ctx.restore()}
+ctx.drawImage(im,x,y,w,h);
+if(h<ch-1){const f=h*.22,band=(y0,y1,a0)=>{const g=ctx.createLinearGradient(0,y0,0,y1);g.addColorStop(0,`rgba(4,6,11,${a0})`);g.addColorStop(1,"rgba(4,6,11,0)");ctx.fillStyle=g;ctx.fillRect(0,Math.min(y0,y1),cw,Math.abs(y1-y0)+1)};
+band(y,y+f,.92);band(y,y-f*1.2,.92);band(y+h,y+h-f,.92);band(y+h,y+h+f*1.2,.92)}}
+const bc=document.createElement("canvas");bc.width=40;bc.height=23;const bctx=bc.getContext("2d");
 const seq=document.getElementById("seq"),beats=[...document.querySelectorAll(".beat")],hint=document.getElementById("hint");
 function prog(){const r=seq.getBoundingClientRect();return Math.min(1,Math.max(0,-r.top/(r.height-innerHeight)))}
 function updateBeats(p){beats.forEach(b=>{const a=+b.dataset.in,z=+b.dataset.out,f=.05;let o=0;if(p>=a&&p<=z)o=Math.min(1,(p-a)/f,(z-p)/f);if(a===0&&p<f)o=1;o=Math.max(0,Math.min(1,o));b.style.opacity=o;b.style.transform=`translateY(${(1-o)*24}px)`});hint.style.opacity=p<.02?1:0}
